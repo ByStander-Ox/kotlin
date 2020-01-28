@@ -23,24 +23,29 @@ import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.psi2ir.generators.CallGenerator
 
 class LValueWithGetterAndSetterCalls(
-    val callGenerator: CallGenerator,
-    val descriptor: CallableDescriptor,
-    val getterCall: () -> CallBuilder?,
-    val setterCall: (IrExpression) -> CallBuilder?,
+    private val callGenerator: CallGenerator,
+    private val descriptor: CallableDescriptor,
+    private val getterCall: () -> CallBuilder?,
+    private val setterCall: (IrExpression) -> CallBuilder?,
     override val type: IrType,
-    val startOffset: Int,
-    val endOffset: Int,
-    val origin: IrStatementOrigin? = null
+    private val startOffset: Int,
+    private val endOffset: Int,
+    private val origin: IrStatementOrigin? = null,
+    private val compoundAssignmentInfo: ArrayAccessAssignmentReceiver.CompoundAssignmentInfo? = null
 ) : LValue {
 
     override fun load(): IrExpression {
         val call = getterCall() ?: throw AssertionError("No getter call for $descriptor")
-        return callGenerator.generateCall(startOffset, endOffset, call, origin)
+        return callGenerator.generateCall(startOffset, endOffset, call, origin).also {
+            compoundAssignmentInfo?.arrayGetCall = it
+        }
     }
 
     override fun store(irExpression: IrExpression): IrExpression {
         val call = setterCall(irExpression) ?: throw AssertionError("No setter call for $descriptor")
-        return callGenerator.generateCall(startOffset, endOffset, call, origin)
+        return callGenerator.generateCall(startOffset, endOffset, call, origin).also {
+            compoundAssignmentInfo?.arraySetCall = it
+        }
     }
 
 }
